@@ -58,9 +58,6 @@ for i in range(0, len(data_parsed)):
         feature_data.append(temp_feature)
         target_data.append(data_parsed[i][j].get('upostag'))
 
-print feature_data
-print target_data
-
 # PREPROCESSING STRING TO INTEGER (FACTORS)
 import numpy as np
 feature_data = np.array(feature_data)
@@ -79,11 +76,24 @@ target_data = column_preprocessor[3].transform(target_data)
 from sklearn.model_selection import train_test_split
 train_data, test_data, train_target, test_target = train_test_split(feature_data, target_data, test_size = 0.2)
 
-from sklearn.naive_bayes import MultinomialNB
+# Random Forest
+print "Training using Random Forest Classifier : "
 from sklearn.ensemble import RandomForestClassifier
 clf = RandomForestClassifier(n_estimators=250)
 clf.fit(train_data, train_target)
 prediction = clf.predict(test_data)
 
 from sklearn.metrics import accuracy_score
-print ('accuracy = ', accuracy_score(test_target, prediction))
+print ('Accuracy using Random Forest = ', accuracy_score(test_target, prediction))
+
+print "============================================"
+
+# DTL
+print "Training using Decision Tree Classifier : "
+from sklearn.tree import DecisionTreeClassifier
+clf = DecisionTreeClassifier()
+clf.fit(train_data, train_target)
+prediction = clf.predict(test_data)
+
+from sklearn.metrics import accuracy_score
+print ('Accuracy using DTL = ', accuracy_score(test_target, prediction))
