@@ -3,43 +3,50 @@ from conllu.parser import parse
 data = open('id-ud-train.conllu', 'r').read()
 data_parsed = parse(data)
 
-'''item = data_parsed[0][0]
-print data_parsed[0][3].get('form')
-print item.get('id'), "\n"
-print item.get('form'), "\n"
-print item.get('lemma'), "\n"
-print item.get('upostag'), "\n"
-print item.get('xpostag'), "\n"
-print item.get('feats'), "\n"
-print item.get('head'), "\n"
-print item.get('deprel'), "\n"
-print item.get('deps'), "\n"
-print item.get('misc'), "\n"'''
+feature_data = []
+target_data = []
 
-list_data = []
-
-for item in data_parsed:
-    for inner_item in item:
-        _form = str(inner_item.get('form'))
-        _lemma = str(inner_item.get('lemma'))
-        _upostag = str(inner_item.get('upostag'))
-        _xpostag = str(inner_item.get('xpostag'))
-        #_feats = str(inner_item.get('feats'))
-        #_head = str(inner_item.get('head'))
-        _deprel = str(inner_item.get('deprel'))
-        _deps = str(inner_item.get('deps'))
-        #_spaceafter = inner_item.get('misc').get('SpaceAfter')
+for i in range(0, len(data_parsed)):
+    for j in range(0, len(data_parsed[i])):
+        # current word 
+        form = data_parsed[i][j].get('form')
         
-        temp = []
-        temp.append(_form)
-        temp.append(_lemma)
-        temp.append(_upostag)
-        temp.append(_xpostag)
-        #temp.append(_feats)
-        #temp.append(_head)
-        temp.append(_deprel)
-        temp.append(_deps)
-        #temp.append(_spaceafter)
-        list_data.append(temp)
+        # word before and its POS tag
+        word_before = ""
+        postag_before = ""
+        if(data_parsed[i][j].get('id') == 1):
+            word_before = "Null"
+            postag_before = "Null"
+        else:
+            word_before = data_parsed[i][j-1].get('form')
+            postag_before = data_parsed[i][j-1].get('upostag')
+        
+        # word after
+        word_after = ""
+        if(data_parsed[i][j].get('id') == len(data_parsed[i])):
+            word_after = "Null"
+        else:
+            word_after = data_parsed[i][j+1].get('form')
+        
+        temp_feature = []
+        temp_feature.append(form)
+        temp_feature.append(word_before)
+        temp_feature.append(word_after)
+        temp_feature.append(postag_before)
+        
+        feature_data.append(temp_feature)
+        target_data.append(data_parsed[i][j].get('upostag'))
 
-print list_data;
+print feature_data
+print target_data
+
+'''from sklearn.model_selection import train_test_split
+train_data, test_data, train_target, test_target = train_test_split(feature_data, target_data, test_size = 0.2)
+
+from sklearn.naive_bayes import MultinomialNB
+clf = MultinomialNB()
+clf.fit(train_data, train_target)
+prediction = clf.predict(test_data)
+
+from sklearn.metrics import accuracy_score
+print 'accuracy = ', accuracy_score(test_target, prediction)'''
