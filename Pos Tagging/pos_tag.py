@@ -1,8 +1,34 @@
 from conllu.parser import parse
-import os
-os.chdir('Desktop\Informatika\Semester_7\IF4072_NLP\IF4072\Pos Tagging')
+import sys
+from sklearn.externals import joblib
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import accuracy_score
+#import os
+#os.chdir('Desktop\Informatika\Semester_7\IF4072_NLP\IF4072\Pos Tagging')
 
-data = open('id-ud-train.conllu', mode='r', encoding='utf-8').read()
+def features(sentence, index):
+    return [
+        sentence[index],
+        "Null" if index == 0 else sentence[index - 1],
+        "Null" if index == len(sentence) - 1 else sentence[index + 1],
+        "Null" if index == 0 else pos_tag(sentence[index-1]),
+        index == 0,
+        index == len(sentence) - 1,
+        sentence[index][0].upper() == sentence[index][0],
+        sentence[index][:2],
+        sentence[index][:3],
+        sentence[index][-2:],
+        sentence[index][-3:],
+        sentence[index].isdigit()
+    ]
+
+def pos_tag(sentence):
+    tags = clf.predict([features(sentence, index) for index in range(len(sentence))])
+    return zip(sentence, tags)
+
+data = open('id-ud-train.conllu', mode='r').read()
 data_parsed = parse(data)
 
 feature_data = []
@@ -72,28 +98,75 @@ for i in range(0, 12):
 
 target_data = column_preprocessor[3].transform(target_data)
 
-# TRAINING MODEL
-from sklearn.model_selection import train_test_split
-train_data, test_data, train_target, test_target = train_test_split(feature_data, target_data, test_size = 0.2)
+################# USER INTERACTION ##########################################
+clf = None
 
-# Random Forest
-print "Training using Random Forest Classifier : "
-from sklearn.ensemble import RandomForestClassifier
-clf = RandomForestClassifier(n_estimators=250)
-clf.fit(train_data, train_target)
-prediction = clf.predict(test_data)
-
-from sklearn.metrics import accuracy_score
-print ('Accuracy using Random Forest = ', accuracy_score(test_target, prediction))
-
-print "============================================"
-
-# DTL
-print "Training using Decision Tree Classifier : "
-from sklearn.tree import DecisionTreeClassifier
-clf = DecisionTreeClassifier()
-clf.fit(train_data, train_target)
-prediction = clf.predict(test_data)
-
-from sklearn.metrics import accuracy_score
-print ('Accuracy using DTL = ', accuracy_score(test_target, prediction))
+while(True) :
+    print("\n=========================")
+    print("What do you want to do ?")
+    print("=========================")
+    print("1. Load Model")
+    print("2. Train Model")
+    print("3. Start Pos-Tagging")
+    print("4. Exit")
+    choice = input("Your choice : ")
+    
+    if(choice == '1'):
+        try:
+            filename = input("File name: ")
+            filename = "model/" + filename
+            clf = joblib.load(filename)
+            print("Model Loaded !")
+        except IOError:
+            print("\nFile not found !")
+            
+    elif(choice == '2'):
+        train_data, test_data, train_target, test_target = train_test_split(feature_data, target_data, test_size = 0.2)
+    
+        print("\nSelect the classifier :")
+        print("1. Random Forest")
+        print("2. Decision Tree Classifier")
+        cls_choice = input("Your choice : ")
+        
+        if(cls_choice == '1'):
+            print ("Training using Random Forest Classifier : ")
+            clf = RandomForestClassifier(n_estimators=250)
+            clf.fit(train_data, train_target)
+            
+            prediction = clf.predict(test_data)
+            
+            print ('Accuracy using Random Forest = ', accuracy_score(test_target, prediction))
+        else:
+            print ("Training using Decision Tree Classifier : ")
+            clf = DecisionTreeClassifier()
+            clf.fit(train_data, train_target)
+            
+            prediction = clf.predict(test_data)
+            print ('\nAccuracy using DTL = ', accuracy_score(test_target, prediction))
+            
+        issave = input("\n\nYou want to save this model ? (y/n): ")
+        if(issave.lower() == 'y'):
+            filename = input("File name: ")
+            filename = "model/" + filename
+            joblib.dump(clf, filename)
+            print("\nModel has been saved !")
+            
+    elif(choice == '3'):
+        if(clf != None):
+            sentence = input("Input the sentence : ")
+            sentence = sentence.split(" ")
+            
+            # ERROR karena hasil label encoder cuman 1 dimensi
+            # Method pos_tag sama feature, butuh sentence sebagai list of word
+            
+            #le = preprocessing.LabelEncoder()
+            #le.fit(sentence)
+            #sentence = le.transform(sentence)
+            
+            #print("Result : \n")
+            #print(pos_tag(sentence))'''
+        else:
+            print("\nPlease train the model or load it !\n")
+        
+    else:
+        sys.exit(0)
