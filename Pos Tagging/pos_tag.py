@@ -8,26 +8,7 @@ from sklearn.metrics import accuracy_score
 #import os
 #os.chdir('Desktop\Informatika\Semester_7\IF4072_NLP\IF4072\Pos Tagging')
 
-def features(sentence, index):
-    return [
-        sentence[index],
-        "Null" if index == 0 else sentence[index - 1],
-        "Null" if index == len(sentence) - 1 else sentence[index + 1],
-        "Null" if index == 0 else pos_tag(sentence[index-1]),
-        index == 0,
-        index == len(sentence) - 1,
-        sentence[index][0].upper() == sentence[index][0],
-        sentence[index][:2],
-        sentence[index][:3],
-        sentence[index][-2:],
-        sentence[index][-3:],
-        sentence[index].isdigit()
-    ]
-
-def pos_tag(sentence):
-    tags = clf.predict([features(sentence, index) for index in range(len(sentence))])
-    return zip(sentence, tags)
-
+#data = open('id-ud-train.conllu', mode='r', encoding='utf-8').read() # For Python 3
 data = open('id-ud-train.conllu', mode='r').read()
 data_parsed = parse(data)
 
@@ -96,10 +77,51 @@ for i in range(0, 12):
     feature_data[:, i] = _col_preprocessor.transform(feature_data[:, i])
     column_preprocessor.append(_col_preprocessor)
 
+# Transforming target class using POS TAG Label Encoder (attribute 4)
 target_data = column_preprocessor[3].transform(target_data)
+
+# Save Label Encoder
+for i in range(0, 12):
+    np.save('encoders/encoder' + str(i) + '.npy', column_preprocessor[i].classes_)
 
 ################# USER INTERACTION ##########################################
 clf = None
+
+from sklearn import preprocessing
+import numpy as np
+POSTAG_ENCODER_INDEX = 3
+label_encoders = []
+for i in range(0, 12):
+    encoder = preprocessing.LabelEncoder()
+    encoder.classes_ = np.load('encoders/encoder' + str(i) + '.npy')
+    label_encoders.append(encoder)
+    
+def features(sentence, index, postag_before):
+    return [
+        sentence[index],                                                #current_word
+        "Null" if index == 0 else sentence[index - 1],                  #word_before
+        "Null" if index == len(sentence) - 1 else sentence[index + 1],  #word_after
+        "Null" if index == 0 else postag_before,                        #postag_before
+        index == 0,                                                     #is_first
+        index == len(sentence) - 1,                                     #is_last
+        sentence[index][0].upper() == sentence[index][0],               #is_capitalized
+        sentence[index][:2],                                            #prefix_2
+        sentence[index][:3],                                            #prefix_3
+        sentence[index][-2:],                                           #suffix_2
+        sentence[index][-3:],                                           #suffix_3
+        sentence[index].isdigit()                                       #is_numeric
+    ]
+
+def pos_tag(sentence, index, postag_before):
+    feature = features(sentence, index, postag_before)
+    for i in range(0, 12):
+        feature[i] = label_encoders[i].transform([feature[i]])[0]
+    return clf.predict([feature])
+    
+#def pos_tag(sentence):
+#    tags = clf.predict([features(sentence, index) for index in range(len(sentence))])
+#    return zip(sentence, tags)
+
 
 while(True) :
     print("\n=========================")
@@ -155,6 +177,12 @@ while(True) :
         if(clf != None):
             sentence = input("Input the sentence : ")
             sentence = sentence.split(" ")
+            
+            current_tag = 'NULL'
+            for i in range(0, len(sentence)):
+                current_tag = pos_tag(sentence, i, current_tag)
+                current_tag = label_encoders[POSTAG_ENCODER_INDEX].inverse_transform(current_tag)[0]
+                print(sentence[i], '->', current_tag, '\n')
             
             # ERROR karena hasil label encoder cuman 1 dimensi
             # Method pos_tag sama feature, butuh sentence sebagai list of word
