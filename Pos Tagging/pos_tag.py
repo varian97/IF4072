@@ -115,7 +115,11 @@ def features(sentence, index, postag_before):
 def pos_tag(sentence, index, postag_before):
     feature = features(sentence, index, postag_before)
     for i in range(0, 12):
-        feature[i] = label_encoders[i].transform([feature[i]])[0]
+        try:
+            feature[i] = label_encoders[i].transform([feature[i]])[0]
+        except:
+            feature[i] = "Null"
+            feature[i] = label_encoders[1].transform([feature[i]])[0]
     return clf.predict([feature])
     
 #def pos_tag(sentence):
